@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -51,7 +51,6 @@
             width: 100%;
         }
         
-        /* طراحی یکدست شیشه‌ای نئونی برای تمام اجزای بالای صفحه */
         .glass-panel {
             background: rgba(20, 20, 40, 0.75);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -194,7 +193,6 @@
 
     <div class="ui-layer">
         <header>
-            <!-- بخش امتیازات سمت راست -->
             <div class="score-board glass-panel interactive">
                 <div class="score-item">
                     <span class="score-label">SCORE</span>
@@ -206,9 +204,8 @@
                 </div>
             </div>
 
-            <!-- نوار دکمه‌های آیکونی یکدست در سمت چپ -->
             <div class="top-actions">
-                <div class="icon-btn glass-panel interactive" onclick="submitRecord()" title="ثبت رکورد">🏆</div>
+                <div class="icon-btn glass-panel interactive" onclick="submitRecord()" title="Submit Score">🏆</div>
                 <div class="icon-btn glass-panel interactive" id="sound-toggle" onclick="toggleSound()">🔊</div>
                 <div class="icon-btn glass-panel interactive" id="info-btn" onclick="toggleInfo(true)">ℹ️</div>
             </div>
@@ -221,24 +218,24 @@
         </div>
     </div>
 
-    <!-- منوی شروع / باخت -->
+    <!-- Start / Game Over Overlay -->
     <div id="start-overlay" class="overlay interactive">
         <div class="overlay-card">
             <div class="overlay-title">NEON STACK 3D</div>
-            <div class="overlay-desc">برای چیدن دقیق بلوک‌ها روی یکدیگر، در زمان مناسب روی دکمه ضربه بزنید!</div>
-            <button class="action-btn" onclick="startGame()">شروع بازی</button>
+            <div class="overlay-desc">Tap at the right moment to stack blocks precisely on top of each other!</div>
+            <button class="action-btn" onclick="startGame()">PLAY NOW</button>
         </div>
     </div>
 
-    <!-- پنل اینفو -->
+    <!-- Info Overlay -->
     <div id="info-overlay" class="overlay interactive hidden">
         <div class="overlay-card">
-            <div class="overlay-title">درباره بازی</div>
+            <div class="overlay-title">ABOUT</div>
             <div class="overlay-desc">
-                طراح و مجری:<br>
+                Designed & Developed by:<br>
                 <a href="https://t.me/ilwin01" target="_blank">t.me/ilwin01</a>
             </div>
-            <button class="action-btn" onclick="toggleInfo(false)">بازگشت</button>
+            <button class="action-btn" onclick="toggleInfo(false)">BACK</button>
         </div>
     </div>
 
@@ -322,7 +319,6 @@
             triggerHaptic();
             let record = localStorage.getItem('neon_stack_best') || score;
             
-            // اصلاح نحوه ارسال رکورد برای سازگاری کامل در تلگرام و مرورگر
             if (tg && typeof tg.sendData === 'function') {
                 try {
                     tg.sendData(JSON.stringify({ action: 'submit_score', score: Number(record) }));
@@ -330,8 +326,7 @@
                 } catch(e) {}
             }
             
-            // حالت جایگزین برای تست در مرورگر یا زمانی که متد sendData در دسترس نباشد
-            alert(`🏆 رکورد شما: ${record}\nبا موفقیت ثبت شد!`);
+            alert(`🏆 Your Score: ${record}\nSuccessfully recorded!`);
         }
 
         let stack = [];
@@ -426,8 +421,8 @@
             const overlay = document.getElementById('start-overlay');
             overlay.classList.remove('hidden');
             document.querySelector('.overlay-title').innerText = 'GAME OVER';
-            document.querySelector('.overlay-desc').innerHTML = `امتیاز شما: ${score}<br>رکورد: ${bestScore}`;
-            document.querySelector('.overlay-card button').innerText = 'تلاش مجدد';
+            document.querySelector('.overlay-desc').innerHTML = `Your Score: ${score}<br>Best Score: ${bestScore}`;
+            document.querySelector('.overlay-card button').innerText = 'PLAY AGAIN';
         }
 
         function toScreen(x, y, z) {
