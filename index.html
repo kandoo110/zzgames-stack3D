@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Stack 3D</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #05050d;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #fff;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
+        }
+        .interactive {
+            pointer-events: auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .score-board {
+            background: rgba(18, 18, 35, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 10px 20px;
+            display: flex;
+            gap: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .score-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .score-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #8e92a8;
+            margin-bottom: 2px;
+        }
+        .score-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: #00f2fe;
+            text-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+        }
+        .top-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .icon-btn {
+            background: rgba(18, 18, 35, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s ease;
+        }
+        .icon-btn:active {
+            transform: scale(0.92);
+        }
+        .controls-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            align-items: center;
+        }
+        .action-btn {
+            width: 100%;
+            max-width: 380px;
+            height: 60px;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #f72585 100%);
+            border: none;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 12px 30px rgba(79, 172, 254, 0.45);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.1s ease;
+        }
+        .action-btn:active {
+            transform: scale(0.96);
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 13, 0.9);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+        .overlay-card {
+            background: rgba(20, 20, 40, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 32px;
+            padding: 36px 28px;
+            max-width: 340px;
+            width: 100%;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        .overlay-title {
+            font-size: 30px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00f2fe, #f72585);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .overlay-desc {
+            font-size: 15px;
+            color: #b0b4ce;
+            line-height: 1.6;
+        }
+        .overlay-desc a {
+            color: #00f2fe;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <header>
+            <div class="score-board interactive">
+                <div class="score-item">
+                    <span class="score-label">SCORE</span>
+                    <span id="current-score" class="score-value">0</span>
+                </div>
+                <div class="score-item" style="border-left: 1px solid rgba(255,255,255,0.12); padding-left: 24px;">
+                    <span class="score-label">BEST</span>
+                    <span id="best-score" class="score-value" style="color: #f72585;">0</span>
+                </div>
+            </div>
+            <div class="top-buttons">
+                <div class="icon-btn interactive" id="info-btn" onclick="toggleInfo(true)">ℹ️</div>
+                <div class="icon-btn interactive" id="sound-toggle" onclick="toggleSound()">🔊</div>
+            </div>
+        </header>
+
+        <div class="controls-footer">
+            <button class="action-btn interactive" id="drop-btn" onclick="dropBlock()">
+                ⬇️ DROP BLOCK
+            </button>
+        </div>
+    </div>
+
+    <!-- منوی شروع / باخت -->
+    <div id="start-overlay" class="overlay interactive">
+        <div class="overlay-card">
+            <div class="overlay-title">NEON STACK 3D</div>
+            <div class="overlay-desc">برای چیدن دقیق بلوک‌ها روی یکدیگر، در زمان مناسب روی دکمه ضربه بزنید!</div>
+            <button class="action-btn" onclick="startGame()">شروع بازی</button>
+        </div>
+    </div>
+
+    <!-- پنل اینفو -->
+    <div id="info-overlay" class="overlay interactive hidden">
+        <div class="overlay-card">
+            <div class="overlay-title">درباره بازی</div>
+            <div class="overlay-desc">
+                طراح و مجری:<br>
+                <a href="https://t.me/ilwin01" target="_blank">t.me/ilwin01</a>
+            </div>
+            <button class="action-btn" onclick="toggleInfo(false)">بازگشت</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let score = 0;
+        let bestScore = localStorage.getItem('neon_stack_best') || 0;
+        document.getElementById('best-score').innerText = bestScore;
+
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                let now = audioCtx.currentTime;
+                if (type === 'drop') {
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.12);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'over') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160, now);
+                    osc.frequency.linearRampToValueAtTime(40, now + 0.35);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                }
+            } catch(e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-toggle').innerText = soundEnabled ? '🔊' : '🔇';
+        }
+
+        function toggleInfo(show) {
+            const infoOverlay = document.getElementById('info-overlay');
+            if (show) infoOverlay.classList.remove('hidden');
+            else infoOverlay.classList.add('hidden');
+        }
+
+        let stack = [];
+        let currentBlock = null;
+        let gameStarted = false;
+        let gameOver = false;
+        let cameraY = 0;
+        let targetCameraY = 0;
+
+        // پارامترهای رندر سه‌بعدی ایزومتریک
+        const ISO_X = 55;
+        const ISO_Y = 28;
+        const BLOCK_H = 32;
+
+        function initGame() {
+            stack = [
+                { x: 0, z: 0, w: 3, d: 3, y: 0, color: '#1a1a36' }
+            ];
+            score = 0;
+            document.getElementById('current-score').innerText = score;
+            gameOver = false;
+            cameraY = 0;
+            targetCameraY = 0;
+            spawnNextBlock();
+        }
+
+        function spawnNextBlock() {
+            let prev = stack[stack.length - 1];
+            let y = prev.y + 1;
+            let hue = (y * 32) % 360;
+            let axis = y % 2 === 0 ? 'x' : 'z';
+
+            currentBlock = {
+                x: axis === 'x' ? -4 : prev.x,
+                z: axis === 'z' ? -4 : prev.z,
+                w: prev.w,
+                d: prev.d,
+                y: y,
+                axis: axis,
+                dir: 1,
+                speed: 0.06 + Math.min(y * 0.002, 0.05),
+                color: `hsl(${hue}, 95%, 60%)`
+            };
+        }
+
+        function startGame() {
+            initAudio();
+            document.getElementById('start-overlay').classList.add('hidden');
+            initGame();
+            gameStarted = true;
+        }
+
+        function dropBlock() {
+            if (!gameStarted || gameOver) return;
+            playSound('drop');
+
+            let prev = stack[stack.length - 1];
+            let b = currentBlock;
+
+            if (b.axis === 'x') {
+                let delta = b.x - prev.x;
+                let overlap = b.w - Math.abs(delta);
+                if (overlap <= 0) { endGame(); return; }
+                b.w = overlap;
+                b.x = prev.x + delta / 2;
+            } else {
+                let delta = b.z - prev.z;
+                let overlap = b.d - Math.abs(delta);
+                if (overlap <= 0) { endGame(); return; }
+                b.d = overlap;
+                b.z = prev.z + delta / 2;
+            }
+
+            stack.push({ x: b.x, z: b.z, w: b.w, d: b.d, y: b.y, color: b.color });
+
+            score++;
+            document.getElementById('current-score').innerText = score;
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('neon_stack_best', bestScore);
+                document.getElementById('best-score').innerText = bestScore;
+            }
+
+            targetCameraY = b.y * BLOCK_H;
+            spawnNextBlock();
+        }
+
+        function endGame() {
+            playSound('over');
+            gameOver = true;
+            gameStarted = false;
+
+            const overlay = document.getElementById('start-overlay');
+            overlay.classList.remove('hidden');
+            document.querySelector('.overlay-title').innerText = 'GAME OVER';
+            document.querySelector('.overlay-desc').innerHTML = `امتیاز شما: ${score}<br>رکورد: ${bestScore}`;
+            document.querySelector('.overlay-card button').innerText = 'تلاش مجدد';
+        }
+
+        function toScreen(x, y, z) {
+            let cx = width / 2;
+            let cy = height / 2 + 100 + cameraY;
+            let sx = cx + (x - z) * ISO_X;
+            let sy = cy + (x + z) * ISO_Y - (y * BLOCK_H);
+            return { x: sx, y: sy };
+        }
+
+        function drawIsometricCube(x, z, w, d, y, colorStr) {
+            let p1 = toScreen(x - w/2, y, z - d/2);
+            let p2 = toScreen(x + w/2, y, z - d/2);
+            let p3 = toScreen(x + w/2, y, z + d/2);
+            let p4 = toScreen(x - w/2, y, z + d/2);
+
+            let t1 = toScreen(x - w/2, y + 1, z - d/2);
+            let t2 = toScreen(x + w/2, y + 1, z - d/2);
+            let t3 = toScreen(x + w/2, y + 1, z + d/2);
+            let t4 = toScreen(x - w/2, y + 1, z + d/2);
+
+            // وجه چپ
+            ctx.fillStyle = colorStr;
+            ctx.globalAlpha = 0.75;
+            ctx.beginPath();
+            ctx.moveTo(p4.x, p4.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.lineTo(t3.x, t3.y);
+            ctx.lineTo(t4.x, t4.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // وجه راست
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.moveTo(p2.x, p2.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.lineTo(t3.x, t3.y);
+            ctx.lineTo(t2.x, t2.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // رویه بالا
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.moveTo(t1.x, t1.y);
+            ctx.lineTo(t2.x, t2.y);
+            ctx.lineTo(t3.x, t3.y);
+            ctx.lineTo(t4.x, t4.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // حاشیه نئونی دور مکعب
+            ctx.strokeStyle = "rgba(255,255,255,0.4)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        function update() {
+            if (gameStarted && currentBlock) {
+                let b = currentBlock;
+                if (b.axis === 'x') {
+                    b.x += b.speed * b.dir;
+                    if (b.x > 3.8 || b.x < -3.8) b.dir *= -1;
+                } else {
+                    b.z += b.speed * b.dir;
+                    if (b.z > 3.8 || b.z < -3.8) b.dir *= -1;
+                }
+            }
+
+            cameraY += (targetCameraY - cameraY) * 0.1;
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            // پس‌زمینه
+            let grad = ctx.createLinearGradient(0, 0, 0, height);
+            grad.addColorStop(0, '#05050d');
+            grad.addColorStop(1, '#101026');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+
+            // رندر لایه‌ها
+            for (let i = 0; i < stack.length; i++) {
+                let b = stack[i];
+                drawIsometricCube(b.x, b.z, b.w, b.d, b.y, b.color);
+            }
+
+            // رندر بلوک متحرک
+            if (gameStarted && currentBlock) {
+                let b = currentBlock;
+                drawIsometricCube(b.x, b.z, b.w, b.d, b.y, b.color);
+            }
+        }
+
+        function loop() {
+            update();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        // شروع حلقه رندر به محض بارگذاری
+        loop();
+    </script>
+</body>
+</html>
