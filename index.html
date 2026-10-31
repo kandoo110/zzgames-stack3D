@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Neon Stack 3D</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -229,6 +230,12 @@
     </div>
 
     <script>
+        // راه‌اندازی SDK تلگرام
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -251,7 +258,14 @@
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
+        function triggerHaptic() {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            }
+        }
+
         function playSound(type) {
+            triggerHaptic();
             if (!soundEnabled || !audioCtx) return;
             try {
                 let osc = audioCtx.createOscillator();
@@ -296,7 +310,6 @@
         let cameraY = 0;
         let targetCameraY = 0;
 
-        // پارامترهای رندر سه‌بعدی ایزومتریک
         const ISO_X = 55;
         const ISO_Y = 28;
         const BLOCK_H = 32;
@@ -327,7 +340,7 @@
                 y: y,
                 axis: axis,
                 dir: 1,
-                speed: 0.06 + Math.min(y * 0.002, 0.05),
+                speed: 3.5 + Math.min(y * 0.1, 2.5),
                 color: `hsl(${hue}, 95%, 60%)`
             };
         }
@@ -395,7 +408,6 @@
         }
 
         function drawIsometricCube(x, z, w, d, y, colorStr) {
-            let p1 = toScreen(x - w/2, y, z - d/2);
             let p2 = toScreen(x + w/2, y, z - d/2);
             let p3 = toScreen(x + w/2, y, z + d/2);
             let p4 = toScreen(x - w/2, y, z + d/2);
@@ -405,7 +417,6 @@
             let t3 = toScreen(x + w/2, y + 1, z + d/2);
             let t4 = toScreen(x - w/2, y + 1, z + d/2);
 
-            // وجه چپ
             ctx.fillStyle = colorStr;
             ctx.globalAlpha = 0.75;
             ctx.beginPath();
@@ -416,7 +427,6 @@
             ctx.closePath();
             ctx.fill();
 
-            // وجه راست
             ctx.globalAlpha = 0.9;
             ctx.beginPath();
             ctx.moveTo(p2.x, p2.y);
@@ -426,7 +436,6 @@
             ctx.closePath();
             ctx.fill();
 
-            // رویه بالا
             ctx.globalAlpha = 1.0;
             ctx.beginPath();
             ctx.moveTo(t1.x, t1.y);
@@ -436,21 +445,23 @@
             ctx.closePath();
             ctx.fill();
 
-            // حاشیه نئونی دور مکعب
             ctx.strokeStyle = "rgba(255,255,255,0.4)";
             ctx.lineWidth = 1.5;
             ctx.stroke();
         }
 
-        function update() {
+        let lastTime = performance.now();
+        function update(dt) {
             if (gameStarted && currentBlock) {
                 let b = currentBlock;
                 if (b.axis === 'x') {
-                    b.x += b.speed * b.dir;
-                    if (b.x > 3.8 || b.x < -3.8) b.dir *= -1;
+                    b.x += b.speed * b.dir * dt;
+                    if (b.x > 3.8) { b.x = 3.8; b.dir = -1; }
+                    if (b.x < -3.8) { b.x = -3.8; b.dir = 1; }
                 } else {
-                    b.z += b.speed * b.dir;
-                    if (b.z > 3.8 || b.z < -3.8) b.dir *= -1;
+                    b.z += b.speed * b.dir * dt;
+                    if (b.z > 3.8) { b.z = 3.8; b.dir = -1; }
+                    if (b.z < -3.8) { b.z = -3.8; b.dir = 1; }
                 }
             }
 
@@ -460,34 +471,34 @@
         function render() {
             ctx.clearRect(0, 0, width, height);
 
-            // پس‌زمینه
             let grad = ctx.createLinearGradient(0, 0, 0, height);
             grad.addColorStop(0, '#05050d');
             grad.addColorStop(1, '#101026');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, width, height);
 
-            // رندر لایه‌ها
             for (let i = 0; i < stack.length; i++) {
                 let b = stack[i];
                 drawIsometricCube(b.x, b.z, b.w, b.d, b.y, b.color);
             }
 
-            // رندر بلوک متحرک
             if (gameStarted && currentBlock) {
                 let b = currentBlock;
                 drawIsometricCube(b.x, b.z, b.w, b.d, b.y, b.color);
             }
         }
 
-        function loop() {
-            update();
+        function loop(now) {
+            let dt = (now - lastTime) / 1000;
+            if (dt > 0.1) dt = 0.1; // جلوگیری از پرش انیمیشن
+            lastTime = now;
+
+            update(dt);
             render();
             requestAnimationFrame(loop);
         }
 
-        // شروع حلقه رندر به محض بارگذاری
-        loop();
+        requestAnimationFrame(loop);
     </script>
 </body>
 </html>
